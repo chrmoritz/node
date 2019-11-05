@@ -16,6 +16,7 @@ from gyp.common import OrderedSet
 import gyp.MSVSUtil
 import gyp.MSVSVersion
 
+PY3 = bytes != str
 
 windows_quoter_regex = re.compile(r'(\\*)"')
 
@@ -130,7 +131,10 @@ def _FindDirectXInstallation():
     # Setup params to pass to and attempt to launch reg.exe.
     cmd = ['reg.exe', 'query', r'HKLM\Software\Microsoft\DirectX', '/s']
     p = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-    for line in p.communicate()[0].splitlines():
+    stdout = p.communicate()[0]
+    if PY3:
+      stdout = stdout.decode('utf-8')
+    for line in stdout.splitlines():
       if 'InstallPath' in line:
         dxsdk_dir = line.split('    ')[3] + "\\"
 
@@ -1045,6 +1049,8 @@ def GenerateEnvironmentFiles(toplevel_build_dir, generator_flags,
     popen = subprocess.Popen(
         args, shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
     variables, _ = popen.communicate()
+    if PY3:
+      variables = variables.decode('utf-8')
     if popen.returncode != 0:
       raise Exception('"%s" failed with error %d' % (args, popen.returncode))
     env = _ExtractImportantEnvironment(variables)
@@ -1066,6 +1072,8 @@ def GenerateEnvironmentFiles(toplevel_build_dir, generator_flags,
       'for', '%i', 'in', '(cl.exe)', 'do', '@echo', 'LOC:%~$PATH:i'))
     popen = subprocess.Popen(args, shell=True, stdout=subprocess.PIPE)
     output, _ = popen.communicate()
+    if PY3:
+      output = output.decode('utf-8')
     cl_paths[arch] = _ExtractCLPath(output)
   return cl_paths
 
